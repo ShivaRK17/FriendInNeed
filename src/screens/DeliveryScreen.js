@@ -1,36 +1,49 @@
 import { View, Text, StatusBar, ScrollView, FlatList, RefreshControl, Linking, ActivityIndicator } from 'react-native'
 import React, { Suspense, memo, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import {  Button, Card, Chip, Dialog, Icon, IconButton, List, MD3Colors, Portal, Searchbar, Surface } from 'react-native-paper'
+import { Button, Card, Chip, Dialog, Icon, IconButton, List, MD3Colors, Portal, Searchbar, Surface } from 'react-native-paper'
 import delivery from '../constants/deliveryOrders'
 import moment from 'moment'
 import { useApp } from '../context/AppContext'
 import axios from 'axios'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const DeliveryScreen = ({ navigation }) => {
   const [searchString, setSearchString] = useState("")
   const [visible, setVisible] = useState(false)
-  const [currOrder, setCurrOrder] = useState(null)
+  const [currOrder, setCurrOrder] = useState([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [deliveryOrders, setDeliveryOrders] = useState([])
   const { currUserDetails } = useApp()
   const handleConfirmOrder = () => {
     setVisible(false)
-    navigation.navigate("DeliveryOrder", { currOrder })
+    navigation.navigate("Home", { deliveringOrder:currOrder })
   }
   useEffect(() => {
     const getDeliveryOrders = async () => {
       try {
-        const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/getCurrentOrders`);
+        const authToken = await AsyncStorage.getItem("authToken");
+        const response = await axios.get(`https://fin-backend-navy.vercel.app/order/getCurrentOrders`, {
+        // const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/getCurrentOrders`, {
+          headers: {
+            "authorization": authToken,
+            "Content-Type": "application/json",
+          }
+        });
         const data = response.data
         if (data.success) {
-          setDeliveryOrders(data.currentorders);
+          const deliveryOrdersLatest = data.currentorders
+          .filter((order)=>{
+            return new Date().getTime() - new Date(order.created_at).getTime() <= 3600000
+          })
+          setDeliveryOrders(deliveryOrdersLatest);
           setIsLoaded(true)
         }
         else {
           setDeliveryOrders([])
         }
       } catch (error) {
+        setDeliveryOrders([])
         console.log(error);
       }
     }
@@ -38,23 +51,23 @@ const DeliveryScreen = ({ navigation }) => {
     getDeliveryOrders()
   }, [])
 
+  const handleAcceptOrder = (order) => {
+    setVisible(true)
+    setCurrOrder(order)
+  }
 
 
   const OrderCard = ({ order }) => {
-    const handleAcceptOrder = (order) => {
-      setVisible(true)
-      setCurrOrder(order)
-    }
     return (
       <Card className={`m-4 p-2 rounded-lg shadow-lg`}>
         <Card.Content>
-          <View className={`flex-row justify-between align-center`}>
+          <View className={`flex-row justify-between items-center align-center`}>
             <View>
-              <Text className={`text-xl text-black font-bold`}>{(order?.userDetails?.name.length > 15) ? (order?.userDetails?.name.substring(0, 15) + '...') : (order?.userDetails?.name)}</Text>
-              <Text className={`text-gray-500 text-black`}>{order?.userDetails?.roll_number}</Text>
+              <Text className={`text-lg text-black font-bold`}>{(order?.userDetails?.name.length > 17) ? (order?.userDetails?.name.substring(0, 17) + '...') : (order?.userDetails?.name)}</Text>
+              <Text className={`text-gray-500 text-sm`}>{order?.userDetails?.roll_number}</Text>
             </View>
             <View>
-              <Button disabled={order?.ordered_by === currUserDetails._id} mode='contained' onPress={() => handleAcceptOrder(order)}>
+              <Button disabled={order?.ordered_by === currUserDetails._id  || (new Date().getTime() - new Date(order.created_at).getTime() > 3600000)} mode='contained' onPress={() => handleAcceptOrder(order)}>
                 <Text className={`text-white text-center`}>Accept</Text>
               </Button>
             </View>
@@ -79,9 +92,9 @@ const DeliveryScreen = ({ navigation }) => {
       </Card >
     );
   };
-  if(!isLoaded){
-    return <ActivityIndicator className="py-10" color='purple' size={'large'} animating/>
-}
+  if (!isLoaded) {
+    return <ActivityIndicator className="py-10" color='purple' size={'large'} animating />
+  }
   return (
     <>
       <Portal>
@@ -128,19 +141,19 @@ const DeliveryScreen = ({ navigation }) => {
       {/* <Surface elevation={1} className="flex-row bg-purple-100">
         <IconButton icon={'chevron-left'} size={35} className="mx-1" onPress={() => { navigation.goBack() }} />
       </Surface> */}
-        <View style={{ flex: 1 }} className="my-2">
+      <View style={{ flex: 1 }} className="my-2">
 
-          {/* <View className={`flex-1`}> */}
-          <FlatList
-            refreshControl={<RefreshControl refreshing={false} />}
-            ListHeaderComponent={<View><Text className="font-bold text-black antialiased text-2xl ml-5">Customer Orders</Text>{deliveryOrders.length === 0 ? <Text className="m-7 text-black font-semibold text-xl">No Orders :(</Text> : <></>}</View>}
-            // data={deliveryOrders.filter((e) => e.place.includes(searchString))}
-            data={deliveryOrders}
-            renderItem={({ item }) => <OrderCard order={item} />}
-            keyExtractor={(item, index) => index.toString()}
-          />
-          {/* </View> */}
-        </View>
+        {/* <View className={`flex-1`}> */}
+        <FlatList
+          refreshControl={<RefreshControl refreshing={false} />}
+          ListHeaderComponent={<View><Text className="font-bold text-black antialiased text-2xl ml-5">Customer Orders</Text>{deliveryOrders.length === 0 ? <Text className="m-7 text-black font-semibold text-xl">No Orders :(</Text> : <></>}</View>}
+          // data={deliveryOrders.filter((e) => e.place.includes(searchString))}
+          data={deliveryOrders}
+          renderItem={({ item }) => <OrderCard order={item} />}
+          keyExtractor={(item, index) => index.toString()}
+        />
+        {/* </View> */}
+      </View>
     </>
   )
 }

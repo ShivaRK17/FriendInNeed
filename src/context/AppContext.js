@@ -10,9 +10,8 @@ const useAppContext = () => {
     const [currUserDetails, setCurrUserDetails] = useState([])
     const [rollNumber, setRollNumber] = useState(null)
     const [phoneNumber, setPhoneNumber] = useState(null)
-    const [course, setCourse] = useState(null)
     const [currOrders, setCurrOrders] = useState([])
-    const [customersPlaces, setCustomersPlaces] = useState([])
+    const [course, setCourse] = useState(null)
     useEffect(() => {
         const getUserInfo = async () => {
             try {
@@ -33,52 +32,9 @@ const useAppContext = () => {
                 console.log(error);
             }
         }
-        const getCustomerPlaces = async () => {
-            try {
-                const authToken = await AsyncStorage.getItem("authToken");
-                const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/getplaces`, {
-                    headers: {
-                        "authorization": authToken,
-                        "Content-Type":"application/json",
-                    }
-                });
-                const data = response.data;
-                if (data.success) {
-                    setCustomersPlaces(data.places);
-                } else {
-                    setCustomersPlaces([]);
-                }
-            } catch (error) {
-                setCustomersPlaces([])
-                console.log('customer places error');
-                console.log(error);
-            }
-        }
-        const getUserCurrOrders = async () => {
-            try {
-                const authToken = await AsyncStorage.getItem("authToken");
-                const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/userOrders`, {
-                    headers: {
-                        "authorization": authToken,
-                        "Content-Type":"application/json",
-                    }
-                });
-                const data = response.data;
-                if (data.success) {
-                    setCurrOrders(data.currentorders);
-                } else {
-                    setCurrOrders([]);
-                }
-            } catch (error) {
-                setCurrOrders([])
-                console.log('curr orders error');
-                console.log(error);
-            }
-        }
+        
         if(isLogin){
             getUserInfo();
-            getCustomerPlaces();
-            getUserCurrOrders();
         }
     }, [isLogin])
     useEffect(() => {
@@ -106,7 +62,6 @@ const useAppContext = () => {
         phoneNumber, setPhoneNumber,
         course, setCourse,
         currOrders, setCurrOrders,
-        customersPlaces,
         currUserDetails,
         loginLoad, setLoginLoad
     }

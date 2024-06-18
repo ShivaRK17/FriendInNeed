@@ -1,16 +1,19 @@
 import { View, Text, FlatList, Modal, ScrollView, Linking, StatusBar, ActivityIndicator } from 'react-native'
-import React, { Suspense, memo, useState } from 'react'
+import React, { Suspense, memo, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button, IconButton, Searchbar, Card, Title, Divider, TextInput, Tooltip, Portal, Dialog } from 'react-native-paper'
 import { useApp } from '../context/AppContext'
 import logo from '../../assets/restaurent.jpg'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios'
 // import customersPlaces from '../constants/customersPlaces'
 
 const CustomerScreen = ({ navigation }) => {
     const [visible, setVisible] = useState(false)
     const [searchString, setSearchString] = useState("")
     const [currPlace, setcurrPlace] = useState([])
-    const { customersPlaces, currOrders,currUserDetails } = useApp();
+    const [customersPlaces, setCustomersPlaces] = useState([])
+    const { currOrders, currUserDetails, isLogin } = useApp();
 
     const toggleModal = (item) => {
         setcurrPlace(item)
@@ -20,6 +23,33 @@ const CustomerScreen = ({ navigation }) => {
         // toggleModal();
         navigation.navigate("CustomerModal", { item, customPlace })
     };
+    useEffect(() => {
+        const getCustomerPlaces = async () => {
+            try {
+                const authToken = await AsyncStorage.getItem("authToken");
+                const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/getplaces`, {
+                    headers: {
+                        "authorization": authToken,
+                        "Content-Type": "application/json",
+                    }
+                });
+                const data = response.data;
+                if (data.success) {
+                    setCustomersPlaces(data.places);
+                } else {
+                    setCustomersPlaces([]);
+                }
+            } catch (error) {
+                setCustomersPlaces([])
+                console.log('customer places error');
+                console.log(error);
+            }
+        }
+        if (isLogin) {
+            getCustomerPlaces();
+        }
+    }, [isLogin])
+
 
     const RenderDeliveryItem = ({ item }) => (
         <Card className={`m-4 shadow-lg`}>
@@ -39,53 +69,51 @@ const CustomerScreen = ({ navigation }) => {
             </Card.Content>
         </Card >
     );
-    if(!customersPlaces){
-        return <ActivityIndicator color='purple' size={'large'} animating/>
-    }
     return (
         <>
             <SafeAreaView className={`flex-1 ${visible ? 'bg-black/25' : 'bg-white'}`}>
 
-                    {/* {renderModal()} */}
-                    <Portal>
-                        <Dialog visible={visible} onDismiss={() => setVisible(false)}>
-                            <Dialog.Title>Items</Dialog.Title>
-                            <Dialog.Content>
-                                {currPlace.items && currPlace.items.map((e, ind) => {
-                                    return <Text className="text-black" key={ind}>{e}</Text>
-                                })}
-                            </Dialog.Content>
-                            <Dialog.Actions>
-                                <Button onPress={() => setVisible(false)}>Cancel</Button>
-                            </Dialog.Actions>
-                        </Dialog>
-                    </Portal>
-                    <View className="flex-row">
-                        <IconButton icon={'chevron-left'} size={35} className="mx-1" onPress={() => { navigation.goBack() }} />
-                    </View>
-                    <View className="flex-col px-5 pb-3">
-                        <Text className="mb-3 text-black text-xl font-bold">Where do you want to order?</Text>
-                        <View className="bg-red">
-                            <Searchbar
-                                value={searchString}
-                                onChangeText={setSearchString}
-                                maxLength={50}
-                                mode='bar'
-                                right={() => <Tooltip title='Add Place'><IconButton disabled className="bg-gray-100" icon={'plus'} onPress={() => { handleOrder({ name: 'Custom Place' }, true) }} /></Tooltip>}
-                                placeholder="Search"
-                            />
-                        </View>
-                    </View>
-                    {/* <CustomersPlaces className='m-[30px]' customersPlaces={data} /> */}
-                    <View className={`flex-1`}>
-                        <FlatList
-                            showsHorizontalScrollIndicator={false}
-                            ListHeaderComponent={<Text className="px-5 text-black text-lg font-bold">PLACES</Text>}
-                            data={customersPlaces.filter((e) => e.name.includes(searchString))}
-                            renderItem={RenderDeliveryItem}
-                            keyExtractor={(item, index) => index.toString()}
+                {/* {renderModal()} */}
+                <Portal>
+                    <Dialog visible={visible} onDismiss={() => setVisible(false)}>
+                        <Dialog.Title>Items</Dialog.Title>
+                        <Dialog.Content>
+                            {currPlace.items && currPlace.items.map((e, ind) => {
+                                return <Text className="text-black" key={ind}>{e}</Text>
+                            })}
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                            <Button onPress={() => setVisible(false)}>Cancel</Button>
+                        </Dialog.Actions>
+                    </Dialog>
+                </Portal>
+                <View className="flex-row">
+                    <IconButton icon={'chevron-left'} size={35} className="mx-1" onPress={() => { navigation.goBack() }} />
+                </View>
+                <View className="flex-col px-5 pb-3">
+                    <Text className="mb-3 text-black text-xl font-bold">Where do you want to order?</Text>
+                    <View className="bg-red">
+                        <Searchbar
+                            value={searchString}
+                            onChangeText={setSearchString}
+                            maxLength={50}
+                            mode='bar'
+                            right={() => <Tooltip title='Add Place'><IconButton disabled className="bg-gray-100" icon={'plus'} onPress={() => { handleOrder({ name: 'Custom Place' }, true) }} /></Tooltip>}
+                            placeholder="Search"
                         />
                     </View>
+                </View>
+                {/* <CustomersPlaces className='m-[30px]' customersPlaces={data} /> */}
+                <View className={`flex-1`}>
+                    {customersPlaces?.length === 0 && <ActivityIndicator color='purple' size={'large'} animating />}
+                    <FlatList
+                        showsHorizontalScrollIndicator={false}
+                        ListHeaderComponent={customersPlaces?.length!==0 && <Text className="px-5 text-black text-lg font-bold">PLACES</Text>}
+                        data={customersPlaces.filter((e) => e.name.includes(searchString))}
+                        renderItem={RenderDeliveryItem}
+                        keyExtractor={(item, index) => index.toString()}
+                    />
+                </View>
 
             </SafeAreaView>
         </>

@@ -1,5 +1,5 @@
 import { ScrollView, StatusBar, Text, View } from 'react-native'
-import React, { useEffect } from 'react'
+import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button, IconButton, MD3Colors, Surface } from 'react-native-paper'
 import TrendingSlides from '../components/TrendingSlides'
@@ -7,26 +7,9 @@ import Footer from '../components/Footer'
 import RecentOrders from '../components/RecentOrders'
 import CustomerOrders from '../components/CustomerOrders'
 import { useApp } from '../context/AppContext'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import axios from 'axios';
 
 const HomeScreen = ({ navigation }) => {
-    const { currOrders, setCurrOrders,currUserDetails } = useApp();
-    useEffect(() => {
-        const getUserOrders = async () => {
-            const response = await axios.get(`${process.env.EXPO_PUBLIC_BACKEND_URL}/order/userOrders`,{
-                headers:{
-                    "Content-Type":"application/json",
-                    "authorization":await AsyncStorage.getItem("authToken")
-                }
-            });
-            const data = response.data;
-            if (data.success) {
-                setCurrOrders(data.currentorders)
-            }
-        }
-        getUserOrders();
-    }, [])
+    const {currUserDetails } = useApp();
 
     return (
         <SafeAreaView className="flex-1">
@@ -55,10 +38,11 @@ const HomeScreen = ({ navigation }) => {
             </Surface>
             {/* <CustomerPage/> */}
             <ScrollView className="flex-1 pb-3">
-                {currOrders?.length === 0 ? <></> : <View>
+                {/* {currOrders?.length === 0 ? <></> : */}
+                 <View>
                     <Text className="font-bold text-black antialiased text-2xl my-5 ml-3">Your Order</Text>
                     <CustomerOrders />
-                </View>}
+                </View>
                 <View>
                     <Text className="font-bold text-black antialiased text-2xl my-5 ml-3">Trending Places</Text>
                     <TrendingSlides />

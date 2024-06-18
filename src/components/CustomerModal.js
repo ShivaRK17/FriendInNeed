@@ -15,7 +15,7 @@ const CustomerModal = ({ route, navigation }) => {
     const { item, customPlace } = route.params;
 
     const [orderDesc, setOrderDesc] = useState("")
-    const { currOrders, setCurrOrders, currUserDetails } = useApp();
+    const { setCurrOrders, currUserDetails } = useApp();
     const locationList = [
         {
             "label": "1k",
